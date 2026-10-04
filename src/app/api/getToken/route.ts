@@ -3,21 +3,31 @@ import { AccessToken } from 'livekit-server-sdk';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const name = searchParams.get('name') || 'Guest User';
+  const name = (searchParams.get('name') || '').trim().slice(0, 60) || 'Guest User';
   let room = searchParams.get('room');
+
+  // Optional Indian mobile number from the live demo; the agent saves it as a lead
+  const rawPhone = (searchParams.get('phone') || '').replace(/\D/g, '');
+  const phone = rawPhone.length === 12 && rawPhone.startsWith('91') ? rawPhone.slice(2) : rawPhone;
+  if (phone && !/^[6-9]\d{9}$/.test(phone)) {
+    return NextResponse.json({ error: 'Please enter a valid 10-digit mobile number.' }, { status: 400 });
+  }
 
   if (!room) {
     room = 'room-' + Math.random().toString(36).substring(2, 10);
   }
 
-  const apiKey = process.env.LIVEKIT_API_KEY || process.env.NEXT_PUBLIC_LIVEKIT_API_KEY || process.env.LK_API_KEY || 'APIwy546qDvRF3K';
-  const apiSecret = process.env.LIVEKIT_API_SECRET || process.env.LK_API_SECRET || 'wLkLMhKo8WbMoeX5NiIHB5nkmNNQZPGk9Yclco78p0f';
+  // Credentials come only from env (.env.local / hosting settings), never from source
+  const apiKey = process.env.LIVEKIT_API_KEY || process.env.NEXT_PUBLIC_LIVEKIT_API_KEY || process.env.LK_API_KEY;
+  const apiSecret = process.env.LIVEKIT_API_SECRET || process.env.LK_API_SECRET;
 
   try {
     if (apiKey && apiSecret) {
       const at = new AccessToken(apiKey, apiSecret, {
-        identity: name,
+        // Unique identity so two visitors with the same name never collide
+        identity: 'visitor-' + Math.random().toString(36).substring(2, 10),
         name: name,
+        metadata: JSON.stringify({ phone: phone ? '+91' + phone : '' }),
       });
       at.addGrant({
         roomJoin: true,

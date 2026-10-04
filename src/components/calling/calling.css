@@ -644,3 +644,29 @@
 .dock-tooltip {
   display: none;
 }
+
+/* Mobile number field (+91 prefix) in the start-call form */
+.modal-phone-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+}
+
+.modal-phone-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #09090b 0%, #121216 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #e5e5e5;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9);
+}
+
+.modal-phone-group input {
+  flex: 1;
+  min-width: 0;
+}

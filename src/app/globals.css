@@ -604,3 +604,49 @@ body {
   }
 }
 
+
+/* Homepage hero: headline left, live demo card right */
+.section-content.hero-with-demo {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3rem;
+  /* keep the card clear of the 01–04 section dock fixed on the right */
+  padding-right: 8.5rem;
+}
+
+@media (max-width: 1024px) {
+  .section-content.hero-with-demo {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2.25rem;
+  }
+
+  /* Phones/tablets: headline → live demo card → description → buttons */
+  .hero-with-demo > .hero-copy {
+    display: contents !important;
+  }
+
+  .hero-with-demo > .hero-copy > :first-child {
+    order: 1;
+  }
+
+  .hero-with-demo > .ld-card {
+    order: 2;
+  }
+
+  .hero-with-demo > .hero-copy > :not(:first-child) {
+    order: 3;
+  }
+
+  /* fixed "scroll to explore" would sit on top of the demo card */
+  .scroll-next-indicator.on-hero {
+    display: none !important;
+  }
+
+  /* stacked card makes the hero taller than one screen — let it grow instead of clipping */
+  #section-0.page-section {
+    height: auto;
+    overflow: visible;
+  }
+}

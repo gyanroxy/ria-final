@@ -667,6 +667,7 @@ export default function NavigationDock({
       {/* Floating Bottom Quick Next Indicator */}
       {activeSection < 3 && (
         <div
+          className={activeSection === 0 ? 'scroll-next-indicator on-hero' : 'scroll-next-indicator'}
           onClick={() => onNavigate(activeSection + 1)}
           style={{
             position: 'fixed',

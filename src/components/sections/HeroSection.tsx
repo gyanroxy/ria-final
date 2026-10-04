@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { ArrowRight, Cpu } from 'lucide-react';
+
+// WebRTC/microphone code is browser-only
+const LiveDemoCard = dynamic(() => import('@/components/livedemo/LiveDemoCard'), { ssr: false });
 
 interface HeroSectionProps {
   onExploreClick: () => void;
@@ -59,10 +63,11 @@ export default function HeroSection({ onExploreClick, isMuted, isActive = true }
       </div>
 
       {/* Hero Content */}
-      <div className="section-content">
+      <div className="section-content hero-with-demo">
         <div
+          className="hero-copy"
           style={{
-            maxWidth: '920px',
+            maxWidth: '760px',
             display: 'flex',
             flexDirection: 'column',
             gap: '1.75rem',
@@ -135,6 +140,8 @@ export default function HeroSection({ onExploreClick, isMuted, isActive = true }
             </button>
           </div>
         </div>
+
+        <LiveDemoCard />
       </div>
     </section>
   );

@@ -21,12 +21,24 @@ import {
   CopyIcon,
   CheckIcon,
 } from './Icons';
+import { formatDuration, useCallGuards, useHangUp } from './demoSession';
 import './SimpleVoiceAssistant.css';
 
-const SimpleVoiceAssistant = ({ onDisconnect }) => {
+const STATE_TEXT = {
+  connecting: 'Connecting to RIA…',
+  initializing: 'RIA is joining…',
+  listening: 'Listening to you',
+  thinking: 'Thinking…',
+  speaking: 'RIA is speaking',
+};
+
+const SimpleVoiceAssistant = ({ visitorName, onDisconnect }) => {
   const { state, audioTrack, agentTranscriptions } = useVoiceAssistant();
   const localParticipantState = useLocalParticipant();
   const room = useRoomContext();
+  // Same timer, 5-minute cap and "RIA didn't pick up" timeout as the homepage card
+  const hangUp = useHangUp(room, onDisconnect);
+  const seconds = useCallGuards(state, hangUp);
 
   const isMicrophoneEnabled = localParticipantState?.isMicrophoneEnabled ?? false;
   const localParticipant = localParticipantState?.localParticipant;
@@ -90,19 +102,8 @@ const SimpleVoiceAssistant = ({ onDisconnect }) => {
     }
   };
 
-  // Disconnect / End Call handler
-  const handleDisconnect = () => {
-    try {
-      if (room) {
-        room.disconnect();
-      }
-    } catch (err) {
-      console.error('Failed to disconnect room:', err);
-    }
-    if (onDisconnect) {
-      onDisconnect();
-    }
-  };
+  // End Call: plain hang-up (no reason) closes the modal
+  const handleDisconnect = () => hangUp();
 
   // Copy transcript to clipboard
   const handleCopyTranscript = () => {
@@ -133,13 +134,9 @@ const SimpleVoiceAssistant = ({ onDisconnect }) => {
         </div>
         <div className="header-meta">
           <span className="room-indicator">
-            {state === 'connecting'
-              ? 'Connecting to RIA...'
-              : state === 'speaking'
-              ? 'Agent Speaking'
-              : state === 'listening'
-              ? 'Listening to you'
-              : 'Secure LiveKit Call'}
+            {STATE_TEXT[state] || (visitorName ? `On call with ${visitorName}` : 'Secure LiveKit Call')}
+            {' · '}
+            {formatDuration(seconds)}
           </span>
         </div>
       </div>
@@ -206,7 +203,7 @@ const SimpleVoiceAssistant = ({ onDisconnect }) => {
               <div className="empty-transcript">
                 <div className="empty-icon">💬</div>
                 <p className="empty-headline">No messages yet</p>
-                <p className="empty-sub">Say something or wait for RIA to introduce herself.</p>
+                <p className="empty-sub">Speak in Telugu, Hindi or English — RIA follows you.</p>
               </div>
             ) : (
               <div className="chat-messages-list">

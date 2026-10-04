@@ -1,10 +1,21 @@
 'use client';
 
-import { useState, useCallback, Component } from 'react';
+import { useState, useCallback, useEffect, useRef, Component } from 'react';
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
 import SimpleVoiceAssistant from './SimpleVoiceAssistant';
 import { CloseIcon } from './Icons';
+import {
+  DAILY_LIMIT,
+  LIVEKIT_URL,
+  MIC_OPTIONS,
+  callsLeftToday,
+  fetchDemoToken,
+  loadVisitor,
+  roomErrorHandlers,
+  saveVisitor,
+  validateVisitor,
+} from './demoSession';
 
 class LiveKitErrorBoundary extends Component {
   constructor(props) {
@@ -74,65 +85,45 @@ class LiveKitErrorBoundary extends Component {
   }
 }
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || '';
-
-const LIVEKIT_URL =
-  process.env.NEXT_PUBLIC_LIVEKIT_URL ||
-  process.env.LIVEKIT_URL ||
-  process.env.VITE_LIVEKIT_URL ||
-  'wss://ria-agent-7ux7medh.livekit.cloud';
-
 const LiveKitModal = ({ setShowSupport }) => {
   const [isSubmittingName, setIsSubmittingName] = useState(true);
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [callsLeft, setCallsLeft] = useState(Infinity);
+  const connectedAt = useRef(0);
+  const endReason = useRef('');
 
-  const getToken = useCallback(async (userName) => {
+  // Same visitor + daily limit as the homepage live demo card
+  useEffect(() => {
+    setCallsLeft(callsLeftToday());
+    const saved = loadVisitor();
+    if (saved) {
+      setName(saved.name);
+      setPhone(saved.phone);
+    }
+  }, []);
+
+  const startCall = useCallback(async (visitor) => {
+    if (callsLeftToday() === 0) {
+      setCallsLeft(0);
+      setErrorMsg("You've used all free calls today. Resets at midnight IST.");
+      return;
+    }
     try {
       setIsLoading(true);
       setErrorMsg('');
-
-      // 1. Try native Next.js / Cloudflare /api/getToken route
-      let response = await fetch(`/api/getToken?name=${encodeURIComponent(userName)}`, {
-        method: 'GET',
-        cache: 'no-store',
-      });
-
-      // 2. Fallback to external backend URL if configured and primary failed
-      if (!response.ok && BACKEND_URL) {
-        const backendBase = BACKEND_URL.replace(/\/$/, '');
-        response = await fetch(`${backendBase}/getToken?name=${encodeURIComponent(userName)}`, {
-          method: 'GET',
-          cache: 'no-store',
-        });
-      }
-
-      if (!response.ok) {
-        let detail = response.statusText;
-        try {
-          const body = await response.json();
-          detail = body.error || detail;
-        } catch {
-          // ignore json parse error
-        }
-        throw new Error(detail || 'Failed to retrieve access token');
-      }
-
-      const tokenText = await response.text();
-      if (!tokenText) {
-        throw new Error('Token server returned an empty token.');
-      }
-
-      setToken(tokenText);
+      connectedAt.current = 0;
+      endReason.current = '';
+      const { token: jwt } = await fetchDemoToken(visitor);
+      setCallsLeft(callsLeftToday());
+      setToken(jwt);
       setIsSubmittingName(false);
     } catch (error) {
       console.error('RIA token error:', error);
-      setErrorMsg(
-        error?.message || 'Could not connect to the RIA voice token server.'
-      );
+      setErrorMsg(error?.message || 'Could not connect to the RIA voice token server.');
     } finally {
       setIsLoading(false);
     }
@@ -140,10 +131,27 @@ const LiveKitModal = ({ setShowSupport }) => {
 
   const handleNameSubmit = (event) => {
     event.preventDefault();
-    const cleanName = name.trim();
-    if (!cleanName) return;
-    getToken(cleanName);
+    const { visitor, error } = validateVisitor(name, phone);
+    if (error) {
+      setErrorMsg(error);
+      return;
+    }
+    saveVisitor(visitor);
+    startCall(visitor);
   };
+
+  // Normal hang-up closes the modal; a failure (mic blocked, RIA didn't pick up,
+  // time cap) returns to the form with the reason instead of vanishing
+  const endCall = useCallback(
+    (message = '') => {
+      if (message) endReason.current = message;
+      setToken(null);
+      setIsSubmittingName(true);
+      if (endReason.current) setErrorMsg(endReason.current);
+      else setShowSupport(false);
+    },
+    [setShowSupport]
+  );
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true">
@@ -166,10 +174,12 @@ const LiveKitModal = ({ setShowSupport }) => {
                 <div className="robot-badge-pulse" />
               </div>
 
-              <form onSubmit={handleNameSubmit} className="name-form">
+              <form onSubmit={handleNameSubmit} className="name-form" noValidate>
                 <h2>Talk to RIA — AI Voice Demo</h2>
                 <p className="form-subtext">
-                  Experience RIA live. Enter your name to start talking.
+                  Experience RIA live in any language — Telugu, Hindi, Tamil, English and more. RIA greets you by name and
+                  our team follows up on your number.
+                  {DAILY_LIMIT > 0 && ` ${callsLeft} free ${callsLeft === 1 ? 'call' : 'calls'} left today.`}
                 </p>
 
                 {errorMsg && (
@@ -180,12 +190,34 @@ const LiveKitModal = ({ setShowSupport }) => {
                   <input
                     type="text"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      setErrorMsg('');
+                    }}
                     placeholder="Enter your name..."
                     required
                     autoFocus
+                    autoComplete="name"
                     disabled={isLoading}
-                    maxLength={100}
+                    maxLength={60}
+                  />
+                </div>
+
+                <div className="input-group modal-phone-group">
+                  <span className="modal-phone-prefix">🇮🇳 +91</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={phone}
+                    onChange={(event) => {
+                      setPhone(event.target.value);
+                      setErrorMsg('');
+                    }}
+                    placeholder="Mobile number"
+                    required
+                    autoComplete="tel-national"
+                    disabled={isLoading}
+                    maxLength={16}
                   />
                 </div>
 
@@ -193,7 +225,7 @@ const LiveKitModal = ({ setShowSupport }) => {
                   <button
                     type="submit"
                     className="start-call-btn"
-                    disabled={isLoading}
+                    disabled={isLoading || callsLeft === 0}
                   >
                     {isLoading ? (
                       <span className="btn-spinner-text">Connecting...</span>
@@ -214,7 +246,7 @@ const LiveKitModal = ({ setShowSupport }) => {
 
                 <div className="modal-form-footer">
                   <span>
-                    ⚡ Low-latency voice powered by LiveKit + OpenAI Realtime
+                    ⚡ Speaks Telugu, Hindi &amp; English — calls capped at 5 minutes
                   </span>
                 </div>
               </form>
@@ -232,24 +264,13 @@ const LiveKitModal = ({ setShowSupport }) => {
                 token={token}
                 connect={true}
                 video={false}
-                audio={true}
-                options={{
-                  adaptiveStream: true,
-                  dynacast: true,
-                }}
-                onDisconnected={() => {
-                  setToken(null);
-                  setShowSupport(false);
-                  setIsSubmittingName(true);
-                }}
+                audio={MIC_OPTIONS}
+                options={{ audioCaptureDefaults: MIC_OPTIONS }}
+                onDisconnected={() => endCall()}
+                {...roomErrorHandlers(connectedAt, endCall)}
               >
                 <RoomAudioRenderer />
-                <SimpleVoiceAssistant
-                  onDisconnect={() => {
-                    setToken(null);
-                    setShowSupport(false);
-                  }}
-                />
+                <SimpleVoiceAssistant visitorName={name} onDisconnect={endCall} />
               </LiveKitRoom>
             </LiveKitErrorBoundary>
           ) : null}

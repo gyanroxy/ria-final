@@ -44,3 +44,5 @@ backend/.venv/
 __pycache__/
 *.pyc
 
+# Lead database (visitor names and phone numbers) stays out of git
+backend/auto_db.sqlite
