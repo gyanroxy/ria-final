@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RIA — Invoice Calling Agent</title>
+<link rel="icon" href="assets/logo-mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login" class="login hide">
+  <div class="login-art">
+    <div></div>
+    <div>
+      <h1>RIA calls your customers about pending invoices.</h1>
+      <p>Import the invoice list, and RIA calls each customer in their own language, gets a promise-to-pay date and records it here.</p>
+    </div>
+    <div></div>
+  </div>
+  <div class="login-form">
+    <form class="login-box" onsubmit="event.preventDefault();doLogin()">
+      <img src="assets/logo.png" alt="RIA">
+      <h2>Sign in</h2>
+      <p class="sub" id="loginSub">Enter the dashboard password.</p>
+      <div id="loginErr" class="msg msg-err hide"><span>⚠</span><span id="loginErrText"></span></div>
+      <div id="loginFields">
+        <div class="field"><label for="lgPass">Password</label><input id="lgPass" type="password" autocomplete="current-password"></div>
+        <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== APP SHELL ===================== -->
+<div id="app" class="shell hide">
+  <header class="top">
+    <div class="brand">
+      <img src="assets/logo-mark.png" alt="">
+      <div class="wm">RIA</div>
+    </div>
+    <div class="mobile-nav"><select id="navSel" aria-label="Go to" onchange="go(this.value)"></select></div>
+    <div class="top-right" id="topRight"></div>
+  </header>
+
+  <nav class="side">
+    <div class="nav-label">Invoice agent</div>
+    <div class="nav" id="nav"></div>
+    <div class="side-foot" id="sideFoot"></div>
+  </nav>
+
+  <main class="main" id="main"></main>
+</div>
+
+<div id="modalHost"></div>
+<div id="toastHost"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
