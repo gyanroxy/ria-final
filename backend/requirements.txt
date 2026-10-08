@@ -6,5 +6,4 @@ livekit-plugins-noise-cancellation
 python-dotenv
 livekit-api
 flask
-flask-cors
 anyascii

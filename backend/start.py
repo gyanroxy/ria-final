@@ -4,7 +4,7 @@ import time
 import os
 
 def run():
-    print("🚀 Starting RIA Voice Agent Backend...")
+    print("🚀 Starting RIA invoice agent...")
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     agent_path = os.path.join(base_dir, "agent.py")
@@ -14,8 +14,8 @@ def run():
     print("🎙️ Launching LiveKit Agent worker (agent.py)...")
     agent_process = subprocess.Popen([sys.executable, agent_path, "start"], cwd=base_dir)
 
-    # 2. Start the Flask HTTP Health Check server on the assigned PORT
-    print("🌐 Launching Health Check server (server.py)...")
+    # 2. Start the dashboard server (UI, API and dialer) on the assigned PORT
+    print("🌐 Launching dashboard server (server.py)...")
     server_process = subprocess.Popen([sys.executable, server_path], cwd=base_dir)
 
     try:
